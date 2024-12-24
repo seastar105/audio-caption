@@ -1,0 +1,8 @@
+# torch
+# torchaudio
+# torchvision
+transformers
+datasets[audio]
+webdataset
+accelerate
+einops
