@@ -6,3 +6,5 @@ datasets[audio]
 webdataset
 accelerate
 einops
+hydra-core
+tensorboardx

@@ -1,0 +1,21 @@
+# https://huggingface.co/docs/transformers/v4.47.1/en/main_classes/trainer#transformers.TrainingArguments
+trainer_config:
+  tf32: true
+  bf16: true
+  fp16: false
+  dataloader_num_workers: 8
+  eval_strategy: 'no'
+  eval_steps: null
+  save_strategy: steps
+  save_steps: null
+  save_total_limit: 1
+  gradient_checkpointing: false
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
+  ddp_find_unused_parameters: false
+  logging_steps: 50
+  seed: 998244353
+  optim: adamw_torch
+  adam_beta1: 0.9
+  adam_beta2: 0.98
+  max_grad_norm: 1.0

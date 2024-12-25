@@ -1,47 +1,40 @@
 from datasets import load_dataset
-from data import WhisperAudioCaptionProcessor, WhisperAudioCaptionCollator
-from transformers import WhisperForConditionalGeneration
-from torch.utils.data import DataLoader
-import torch
-from tqdm.auto import tqdm
+from data import WhisperAudioCaptionProcessor, DataCollatorSpeechSeq2SeqWithPadding
+from transformers import WhisperForConditionalGeneration, WhisperConfig
+import hydra
+from omegaconf import DictConfig, OmegaConf
+from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments
 
+
+@hydra.main(version_base=None, config_path="configs", config_name="main")
+def main(config: DictConfig):
+    model_config = config.model_config
+    data_config = config.data_config
+    
+    # Load model
+    whisper_config = WhisperConfig.from_pretrained(model_config.name)
+    whisper_config._attn_implementation = model_config.attn_implementation
+    whisper_model = WhisperForConditionalGeneration.from_pretrained(model_config.name, config=whisper_config)
+    
+    # use translate task as captioning task
+    whisper_model.generation_config.task = "translate"
+    whisper_model.generation_config.forced_decoder_ids = None
+    
+    # Load the dataset
+    processor = WhisperAudioCaptionProcessor(model_config.name)
+    collator = DataCollatorSpeechSeq2SeqWithPadding(processor=processor, decoder_start_token_id=whisper_model.config.decoder_start_token_id)
+    
+    dataset = load_dataset(data_config.name, split="train", streaming=True).map(processor, batched=False)
+    
+    # Load trainer
+    trainer_config = OmegaConf.to_container(config.trainer_config, resolve=True)
+    trainer = Seq2SeqTrainer(
+        model=whisper_model,
+        args=Seq2SeqTrainingArguments(**trainer_config),
+        data_collator=collator,
+        train_dataset=dataset
+    )
+    trainer.train()
 
 if __name__ == "__main__":
-    processor = WhisperAudioCaptionProcessor("openai/whisper-tiny")
-    collator = WhisperAudioCaptionCollator(processor)
-    dataset = load_dataset("krishnakalyan3/emo_webds_2", split="train", streaming=True).map(processor, batched=False).select_columns(["input_features", "input_ids"])
-    
-    num_workers = 4
-    batch_size = 8
-    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collator, num_workers=num_workers)
-    
-    whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
-    tokenzier = processor.tokenizer
-
-    if whisper_model.get_input_embeddings().num_embeddings < len(tokenzier):
-        whisper_model.resize_token_embeddings(len(tokenzier))
-    
-    num_steps = 5000
-    optimizer = torch.optim.AdamW(whisper_model.parameters(), lr=1e-5, weight_decay=0.1)
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-5, total_steps=num_steps)
-    device = torch.device("mps")
-    
-    whisper_model = whisper_model.to(device)
-    whisper_model.train()
-    losses = []
-    num_intervals = 10
-    
-    for step, batch in tqdm(enumerate(dataloader), total=num_steps):
-        if (step + 1) % num_intervals == 0:
-            print(f"Step {step + 1}, Loss: {sum(losses[-num_intervals:]) / num_intervals}, Learning Rate: {scheduler.get_last_lr()[0]}")
-        if step >= num_steps:
-            break
-        batch = {k: v.to(device) for k, v in batch.items() if isinstance(v, torch.Tensor)}
-        outputs = whisper_model(**batch)
-        loss = outputs.loss
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-        optimizer.zero_grad()
-        
-        losses.append(loss.item())
+    main()
