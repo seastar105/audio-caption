@@ -4,7 +4,7 @@ trainer_config:
   bf16: true
   fp16: false
   dataloader_num_workers: 8
-  eval_strategy: 'no'
+  eval_strategy: "no"
   eval_steps: null
   save_strategy: steps
   save_steps: null
