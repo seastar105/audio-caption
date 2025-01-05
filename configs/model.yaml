@@ -1,3 +1,4 @@
 model_config:
-  name: openai/whisper-tiny
+  tokenizer_name: openai/whisper-tiny
+  model_name: openai/whisper-base
   attn_implementation: eager

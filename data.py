@@ -7,15 +7,17 @@ from transformers import WhisperFeatureExtractor, WhisperTokenizer
 
 
 class WhisperAudioCaptionProcessor:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, audio_key: str = "flac", caption_key: str = "text"):
         # use translate task as captioning task now
         self.tokenizer = WhisperTokenizer.from_pretrained(model_name, language="en", task="translate")
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name)
+        self.audio_key = audio_key
+        self.caption_key = caption_key
 
     def __call__(self, item):
-        caption = item["json"]["text"]
-        audio = item["flac"]["array"]
-        sr = item["flac"]["sampling_rate"]
+        caption = item["json"][self.caption_key]
+        audio = item[self.audio_key]["array"]
+        sr = item[self.audio_key]["sampling_rate"]
         if sr != 16000:
             audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
 
