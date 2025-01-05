@@ -34,7 +34,9 @@ def main(config: DictConfig):
     )
     collator = DataCollatorSpeechSeq2SeqWithPadding(processor=processor)
 
-    dataset = load_dataset(data_config.name, split="train", streaming=True).map(processor, batched=False)
+    dataset = load_dataset(data_config.name, split="train", streaming=data_config.streaming).map(
+        processor, batched=False
+    )
 
     # Load trainer
     trainer_config = OmegaConf.to_container(config.trainer_config, resolve=True)

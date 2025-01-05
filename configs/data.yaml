@@ -1,4 +1,5 @@
 data_config:
   name: krishnakalyan3/emo_webds_2
+  streaming: true
   audio_key: mp3
   caption_key: caption
